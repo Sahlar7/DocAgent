@@ -52,14 +52,14 @@ def update_google_doc(doc_id, new_content):
                 }
             }]
             docs_service.documents().batchUpdate(documentId=doc_id, body={'requests': requests}).execute()
-    
-    requests = [{
-        'insertText': {
-            'location': {'index': 1},
-            'text': new_content
-        }
-    }]
-    docs_service.documents().batchUpdate(documentId=doc_id, body={'requests': requests}).execute()
+    if new_content != '':
+        requests = [{
+            'insertText': {
+                'location': {'index': 1},
+                'text': new_content
+            }
+        }]
+        docs_service.documents().batchUpdate(documentId=doc_id, body={'requests': requests}).execute()
     return new_content
 
 search = SerpAPIWrapper()
@@ -160,3 +160,4 @@ if __name__ == "__main__":
             print("Exiting the assistant.")
             break
         print("\n")
+        
