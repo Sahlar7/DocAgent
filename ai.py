@@ -61,11 +61,54 @@ def update_google_doc(doc_id, new_content):
         docs_service.documents().batchUpdate(documentId=doc_id, body={'requests': requests}).execute()
     return new_content
 
-search = SerpAPIWrapper()
+def search_with_sources(query):
+    """
+    Perform a search using SerpAPI and format the results with source information.
+    """
+    search_wrapper = SerpAPIWrapper()
+    raw_results = search_wrapper.results(query)
+    
+    formatted_content = ""
+    sources_list = []
+    
+    if "answer_box" in raw_results:
+        answer_box = raw_results["answer_box"]
+        if "answer" in answer_box:
+            formatted_content += f"{answer_box['answer']}\n\n"
+        elif "snippet" in answer_box:
+            formatted_content += f"{answer_box['snippet']}\n\n"
+            
+        if "source" in answer_box and "link" in answer_box:
+            sources_list.append(f"[1] {answer_box.get('title', 'Answer Box')} - {answer_box['link']} ({answer_box['source']})")
+            formatted_content += "(Source [1])\n\n"
+    
+    if "organic_results" in raw_results and raw_results["organic_results"]:
+        formatted_content += "Search Results:\n\n"
+        
+        for idx, result in enumerate(raw_results["organic_results"][:5]):
+            title = result.get("title", "No Title")
+            link = result.get("link", "No Link")
+            snippet = result.get("snippet", "No description available.")
+            source = result.get("source", "Unknown Source")
+            
+            source_idx = idx + 1
+            if "answer_box" in raw_results:
+                source_idx += 1
+                
+            formatted_content += f"Result {idx+1}: {snippet}\n(Source [{source_idx}])\n\n"
+            sources_list.append(f"[{source_idx}] {title} - {link} ({source})")
+    
+    if sources_list:
+        formatted_content += "\nSources:\n" + "\n".join(sources_list)
+    else:
+        formatted_content += "No relevant sources found."
+    
+    return formatted_content
+
 search_tool = Tool(
     name="Search",
-    func=search.run,
-    description="Useful for answering questions by finding academic sources, links, and abstracts."
+    func=search_with_sources,
+    description="Useful for answering questions by finding academic sources, links, and abstracts. Always use this tool when you need to find information that would benefit from citations."
 )
 
 SYSTEM_TEMPLATE = """
@@ -76,6 +119,10 @@ You are an assistant that helps edit and update Google Docs. When processing a q
 3. When making edits, only modify what's necessary and preserve the rest of the document
 4. Your output should be the COMPLETE updated document content that will replace the current content
 5. Format your response properly for Google Docs with appropriate headings, paragraphs, and citations
+6. When you use search results, ALWAYS include proper citations in the document using the citation numbers provided in the search results
+7. Format citations at the end of sentences or paragraphs where information from sources is used, e.g., "Large language models are becoming more common in everyday applications [2]."
+8. MAINTAIN the "Sources" section if it's provided in search results - do not modify it except to update the index of each source if necessary
+9. If other references already exist in the document, append new citations to the end of the list, ensuring they are numbered correctly
 
 Remember: Your entire response will be used to update the document, so it should be the complete text 
 of the document after your edits, not just the changes or your explanations.
@@ -95,7 +142,7 @@ agent = initialize_agent(
     tools=tools,
     llm=llm,
     agent="chat-conversational-react-description",
-    verbose=False,
+    verbose=True,
     memory=memory
 )
 
@@ -123,11 +170,21 @@ User Query: {query}
 Based on the current document content above and the user query, please perform the requested 
 research or edits. Your response should be the COMPLETE updated document content that will 
 replace what's currently in the document. Only change what's necessary based on the query.
+
+If you use the search tool to find information, please incorporate the citations appropriately 
+in the document. The search results will include numbered references that you should integrate into 
+your writing (e.g., "This is a fact from a source [1].").
+
+Maintain the "Sources" section that comes with search results - Do NOT remove it. You may update only the index of each source
+to integrate with existing references.
 """
     
-    updated_content = agent.run(prompt)
-    
-    return updated_content
+    try:
+        result = agent.invoke({"input": prompt})
+        updated_content = result.get("output", "Error: No output returned from agent")
+        return updated_content
+    except Exception as e:
+        return f"Error processing request: {str(e)}\n\nPlease try again with a different query."
 
 if __name__ == "__main__":
     doc_id = os.getenv("GOOGLE_DOC_ID")
@@ -141,22 +198,27 @@ if __name__ == "__main__":
         if query.lower() == 'exit':
             print("Exiting program.")
             break
-        updated_content = handle_research_query(query, doc_id)
-            
-        print("\nProposed Document Update:")
-        print("-" * 50)
-        print(updated_content)
-        print("-" * 50)
         
-        apply_changes = input("\nDo you want to apply these changes to the document? (y/n): ")
-        if apply_changes.lower() == 'y':
-            update_google_doc(doc_id, updated_content)
-            print("Document updated successfully!")
-        else: 
-            print("Changes not applied.")
+        print("\nResearching and updating document... (this may take a moment)")
+        try:
+            updated_content = handle_research_query(query, doc_id)
+                
+            print("\nProposed Document Update:")
+            print("-" * 50)
+            print(updated_content)
+            print("-" * 50)
+            
+            apply_changes = input("\nDo you want to apply these changes to the document? (y/n): ")
+            if apply_changes.lower() == 'y':
+                update_google_doc(doc_id, updated_content)
+                print("Document updated successfully!")
+            else: 
+                print("Changes not applied.")
+        except Exception as e:
+            print(f"Error processing your request: {e}")
+            
         continue_prompt = input("\nDo you want to make another query? (y/n): ")
         if continue_prompt.lower() != 'y':
             print("Exiting the assistant.")
             break
         print("\n")
-        
