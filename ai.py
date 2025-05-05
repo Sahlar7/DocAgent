@@ -41,7 +41,6 @@ def update_google_doc(doc_id, new_content):
     
     if 'body' in document and 'content' in document['body']:
         end_index = document['body']['content'][-1].get('endIndex', 0)-1
-        print(end_index)
         if end_index > 1:
             requests = [{
                 'deleteContentRange': {
