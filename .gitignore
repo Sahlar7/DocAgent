@@ -1,2 +1,10 @@
 .env
 credentials.json
+.vscode
+.kiro
+venv/
+__pycache__/
+token.json
+
+ai.py
+dependencies.txt

@@ -1,0 +1,20 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+
+# Google API
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+
+# AI Agent
+langchain
+langchain-core
+langchain-google-genai
+langchain-community
+langchain-mcp-adapters
+
+# MCP Server
+fastmcp
