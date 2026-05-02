@@ -1,0 +1,64 @@
+{
+    "name": "DocAgent - Google Docs AI Copilot",
+    "description": "AI-powered writing assistant for Google Docs with intelligent document operations",
+    "version": "1.0.0",
+    "manifest_version": 3,
+    "action": {
+        "default_popup": "./popup/popup.html",
+        "default_icon": {
+            "16": "./images/docagent_icon_16x16.png",
+            "32": "./images/docagent_icon_32x32.png",
+            "48": "./images/docagent_icon_48x48.png",
+            "128": "./images/docagent_icon_128x128.png"
+        }
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://docs.google.com/document/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "css": [
+                "sidebar.css"
+            ],
+            "run_at": "document_end"
+        }
+    ],
+    "permissions": [
+        "identity",
+        "storage",
+        "activeTab"
+    ],
+    "host_permissions": [
+        "https://docs.google.com/*",
+        "http://localhost:8000/*",
+        "http://localhost:8001/*"
+    ],
+    "oauth2": {
+        "client_id": "501397332847-ofokvi1c8e6eapjfc10slljgd6h9e3cm.apps.googleusercontent.com",
+        "scopes": [
+            "https://www.googleapis.com/auth/documents"
+        ]
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "sidebar.css",
+                "images/*",
+                "modules/*.js",
+                "security/*.js"
+            ],
+            "matches": [
+                "https://docs.google.com/*"
+            ]
+        }
+    ],
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'self';"
+    }
+}

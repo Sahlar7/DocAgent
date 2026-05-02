@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "google-docs": {
+      "command": "python",
+      "args": ["mcp_google_docs.py"],
+      "cwd": ".",
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
